@@ -62,7 +62,7 @@ class Data(object):
                         continue
                     if not word in vocab:
                         index += 1
-                        vocab[word.lower()] = index
+                        vocab[word.lower().replace(string.punctuation, '')] = index
         pkl.dump(vocab, open(self.data_type+'vocab.pkl',"wb"))
         return vocab
 
@@ -71,10 +71,10 @@ class Data(object):
         for word in sentence:
             if word.isdigit():
                 actual_sent.append(self.vocab['NUM'])
-            elif word.lower() in self.vocab:
-                actual_sent.append(self.vocab[word.lower()])
+            elif word.lower().replace(string.punctuation, '') in self.vocab:
+                actual_sent.append(self.vocab[word.lower().replace(string.punctuation, '')])
             else:
-                print("Unknown Word: {0}", word)
+                print("Unknown Word:" + word)
                 actual_sent.append(self.vocab['UNK'])
         actual_sent_len = len(actual_sent)
         if  actual_sent_len < padd_len:
@@ -89,10 +89,12 @@ class Data(object):
             lines = f.readlines()
             count = 0
             for line in lines:
-                if line is '':
+                if line is '\n':
                     continue
                 count += 1
                 line = line.split('\t')
+                if self.data_type == 'dev':
+                    line = line[1:]
                 question = re.sub('([.,!?()-])', r'  \1  ', line[0])
                 question = question.split(' ')
                 question = [word for word in question if word != '' ]
@@ -100,7 +102,7 @@ class Data(object):
                 passage = passage.split(' ')
                 passage = [word for word in passage if word != '' ]
                 label = line[2]
-                if(count < 10):
+                if(count < 100):
                     print("************************")
                     print(question)
                     print(passage)
@@ -120,6 +122,7 @@ class Data(object):
         assert(len(self.questions) == len(self.passages) == len(self.labels))
 
     def get_next_batch(self, dssm=False):
+        # print("Batch id"+ str(self.batch_id))
         if self.batch_id == len(self.questions):
             self.batch_id = 0
         batch_questions = self.questions[self.batch_id:min(self.batch_id + self.batch_size,
@@ -132,11 +135,12 @@ class Data(object):
                                         len(self.passages_len))]
         batch_labels = self.labels[self.batch_id:min(self.batch_id  + self.batch_size,
                                    len(self.labels))]
-        if dssm:
-            batch_dssm = self.dssm_vectors[self.batch_id:min(self.batch_id + self.batch_size,   
+        batch_dssm = self.dssm_vectors[self.batch_id:min(self.batch_id + self.batch_size,   
                                                 len(self.dssm_vectors))]
-            return batch_questions, batch_questions_len, batch_passages, batch_passages_len, np.asarray(batch_dssm), np.asarray(batch_labels)
         self.batch_id = min(self.batch_id  + self.batch_size, len(self.labels)) 
+        
+        if dssm:
+            return batch_questions, batch_questions_len, batch_passages, batch_passages_len, np.asarray(batch_dssm), np.asarray(batch_labels)
         return batch_questions, batch_questions_len, batch_passages, batch_passages_len, batch_labels
     
     def read_raw_data_with_dssm(self):
@@ -147,11 +151,14 @@ class Data(object):
             lines = f.readlines()
             count = 0
             for line in lines:
-                if line is '':
+                if line is '\n':
                     continue
                 count += 1
                 line = line.split('\t', maxsplit=3)
-                self.dssm_vectors.append(line[3].strip('\n').split('\t'))
+                final_line = line[3].strip('\n').split('\t')
+                if len(final_line) == 302:
+                    final_line = final_line[0:300] + [0.0]*300
+                self.dssm_vectors.append(final_line)
         pkl.dump(self.dssm_vectors, open(self.data_type + 'dssm.pkl', 'wb'))
         assert(len(self.dssm_vectors) == len(self.questions))
     

@@ -3,10 +3,10 @@ from Data import Data
 
 # Parameters
 learning_rate = 0.1
-num_steps = 100
+num_steps = 300 
 batch_size = 5000
-display_step = 5
-drop_out = 0.5
+display_step = 10
+drop_out = 1
 
 # Network Parameters
 n_hidden_1 = 256 # 1st layer number of neurons
@@ -34,15 +34,15 @@ biases = {
 # Create model
 def neural_net(x):
     # Hidden fully connected layer with 256 neurons
-    layer_1 = tf.add(tf.matmul(x, weights['h1']), biases['b1'])
+    layer_1 = tf.nn.relu(tf.add(tf.matmul(x, weights['h1']), biases['b1']))
     # Dropout on layer 1
-    laryer_1_dropout = tf.nn.dropout(layer_1, keep_prob = drop_out)
+    layer_1_dropout = tf.nn.dropout(layer_1, keep_prob = drop_out)
     # Hidden fully connected layer with 256 neurons
-    layer_2 = tf.add(tf.matmul(laryer_1_dropout, weights['h2']), biases['b2'])
+    layer_2 = tf.nn.relu(tf.add(tf.matmul(layer_1_dropout, weights['h2']), biases['b2']))
     # Dropout on layer 2
     layer_2_dropout = tf.nn.dropout(layer_2, keep_prob = drop_out)
     # Output fully connected layer with a neuron for each class
-    out_layer = tf.matmul(layer_2_dropout, weights['out']) + biases['out']
+    out_layer = tf.matmul(layer_1_dropout, weights['out']) + biases['out']
     return out_layer
 
 # Construct model
@@ -81,12 +81,19 @@ def train():
                     "{:.4f}".format(loss) + ", Training Accuracy= " + \
                     "{:.3f}".format(acc))
         print("Optimization Finished!")
+        '''_, _, _, _, x_train, y_train = ques_pass_data_train.get_data(True)
+        print(x_train.shape)
+        print(y_train.shape)
+        print("Train Accuracy:", \
+            sess.run(accuracy, feed_dict={X: x_train,
+                                        Y: y_train}))'''
+ 
         # Calculate accuracy for MNIST test images
-        ques_pass_data_dev = Data("D:\\PycharmProjects\\DataScienceChallenge\\Data\\dev_w_id.txt", "D:\\PycharmProjects\\DataScienceChallenge\\Data\\dev_dssm_new", data_type='dev', vocab=ques_pass_data_train.vocab)
-        _, _, _, _, x, y = ques_pass_data_dev.get_data(True)
-        print(x.shape)
-        print(y.shape)
-        print("Dev Accuracy:", \
-            sess.run(accuracy, feed_dict={X: x,
-                                        Y: y}))
-        
+        ques_pass_data_dev = Data("D:\\PycharmProjects\\DataScienceChallenge\\Data\\dev_w_id.txt", "D:\\PycharmProjects\\DataScienceChallenge\\Data\\dev_dssm_new.txt", data_type='dev', vocab=ques_pass_data_train.vocab)
+        _, _, _, _, x_dev, y_dev = ques_pass_data_dev.get_data(True)
+        acc, pred =sess.run([accuracy, prediction], feed_dict={X: x_dev,
+                                        Y: y_dev})
+        print("Dev Accuracy:", acc)
+        with open('results.csv', 'w') as res:
+            for i in range(0, pred.shape[0]):
+                res.write(str(i+1) +"," + str(pred[i][1])+"\n")
