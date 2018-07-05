@@ -48,11 +48,11 @@ class Data(object):
             for line in lines:
                 count+=1
                 line = line.split('\t')
-                question = re.sub('([.,!?()-])', r'  \1  ', line[0])
-                question = question.split(' ')
+                question = re.sub(r'[^\w\s]','',line[0])
+                question = question.lower().split(' ')
                 question = [word for word in question if word != '' ]
-                passage = re.sub('([.,!?()-])', r'  \1  ', line[1])
-                passage = passage.split(' ')
+                passage = re.sub(r'[^\w\s]','',line[1])
+                passage = passage.lower().split(' ')
                 passage = [word for word in passage if word != '' ]
                 data = question + passage
                 '''if count<100:
@@ -62,7 +62,7 @@ class Data(object):
                         continue
                     if not word in vocab:
                         index += 1
-                        vocab[word.lower().replace(string.punctuation, '')] = index
+                        vocab[word] = index
         pkl.dump(vocab, open(self.data_type+'vocab.pkl',"wb"))
         return vocab
 
@@ -71,14 +71,16 @@ class Data(object):
         for word in sentence:
             if word.isdigit():
                 actual_sent.append(self.vocab['NUM'])
-            elif word.lower().replace(string.punctuation, '') in self.vocab:
-                actual_sent.append(self.vocab[word.lower().replace(string.punctuation, '')])
+            elif word in self.vocab:
+                actual_sent.append(self.vocab[word])
             else:
                 print("Unknown Word:" + word)
                 actual_sent.append(self.vocab['UNK'])
         actual_sent_len = len(actual_sent)
         if  actual_sent_len < padd_len:
             padded_sent = actual_sent + [self.vocab['UNK']] * (padd_len - actual_sent_len)
+        if actual_sent_len > padd_len:
+            print("Padd size is greater than sentence length")
         return padded_sent, actual_sent_len
 
     def read_raw_data(self):
@@ -95,11 +97,11 @@ class Data(object):
                 line = line.split('\t')
                 if self.data_type == 'dev':
                     line = line[1:]
-                question = re.sub('([.,!?()-])', r'  \1  ', line[0])
-                question = question.split(' ')
+                question = re.sub(r'[^\w\s]','',line[0])
+                question = question.lower().split(' ')
                 question = [word for word in question if word != '' ]
-                passage = re.sub('([.,!?()-])', r'  \1  ', line[1])
-                passage = passage.split(' ')
+                passage = re.sub(r'[^\w\s]','',line[1])
+                passage = passage.lower().split(' ')
                 passage = [word for word in passage if word != '' ]
                 label = line[2]
                 if(count < 100):
